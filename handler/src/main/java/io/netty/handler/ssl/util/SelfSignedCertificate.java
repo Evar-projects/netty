@@ -54,7 +54,7 @@ import java.util.Date;
  * {@link java.io.File#createTempFile(String, String)}, and they are deleted when the JVM exits using
  * {@link java.io.File#deleteOnExit()}.
  * </p><p>
- * The certificate is generated using <a href="http://www.bouncycastle.org/">Bouncy Castle</a>, which is an
+ * The certificate is generated using <a href="https://www.bouncycastle.org/">Bouncy Castle</a>, which is an
  * <em>optional</em> dependency of Netty.
  * </p>
  */
