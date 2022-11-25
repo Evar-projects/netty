@@ -361,45 +361,6 @@
       </properties>
     </profile>
 
-    <!-- JDK10 -->
-    <profile>
-      <id>java10</id>
-      <activation>
-        <jdk>10</jdk>
-      </activation>
-      <properties>
-        <argLine.java9.extras />
-        <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--illegal-access=deny --add-modules java.xml.bind ${argLine.java9.extras}</argLine.java9>
-        <!-- Not use alpn agent as Java10 supports alpn out of the box -->
-        <argLine.alpnAgent />
-        <forbiddenapis.skip>true</forbiddenapis.skip>
-        <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
-        <enforcer.plugin.version>3.0.0-M3</enforcer.plugin.version>
-        <!-- 1.4.x does not work in Java10+ -->
-        <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
-      </properties>
-    </profile>
-
-    <!-- JDK9 -->
-    <profile>
-      <id>java9</id>
-      <properties>
-        <argLine.java9.extras />
-        <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--illegal-access=deny --add-modules java.xml.bind ${argLine.java9.extras}</argLine.java9>
-        <!-- Not use alpn agent as Java9 supports alpn out of the box -->
-        <argLine.alpnAgent />
-        <!-- Skip as maven plugin not works with Java9 yet -->
-        <forbiddenapis.skip>true</forbiddenapis.skip>
-        <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
-        <enforcer.plugin.version>3.0.0-M1</enforcer.plugin.version>
-      </properties>
-      <activation>
-        <jdk>9</jdk>
-      </activation>
-    </profile>
-
     <profile>
       <id>boringssl-mac-aarch64</id>
       <activation>
@@ -513,12 +474,12 @@
       </build>
     </profile>
     <profile>
-      <id>jdk8</id>
+      <id>relaxjavadoc</id>
       <activation>
-        <jdk>[1.8,)</jdk>
+        <jdk>[11,)</jdk>
       </activation>
       <properties>
-        <!-- Our Javadoc has poor enough quality to fail the build thanks to JDK8 javadoc which got more strict. -->
+        <!-- Our Javadoc has poor enough quality to fail the build thanks to JDK8+ javadoc which got more strict. -->
         <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
       </properties>
     </profile>
@@ -542,8 +503,8 @@
   </profiles>
 
   <properties>
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
     <netty.dev.tools.directory>${project.build.directory}/dev-tools</netty.dev.tools.directory>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -578,6 +539,7 @@
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
     <conscrypt.version>2.5.2</conscrypt.version>
     <conscrypt.classifier />
+    <bouncycastle.version>1.69</bouncycastle.version>
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>debug</logging.logLevel>
@@ -733,14 +695,13 @@
       </dependency>
 
       <!--
-        Bouncy Castle - completely optional, only needed when:
-        - you generate a temporary self-signed certificate using SelfSignedCertificate, and
-        - you don't use the JDK which doesn't provide sun.security.x509 package.
+        Bouncy Castle - completely optional, only needed when you generate a temporary self-signed
+        certificate using SelfSignedCertificate.
       -->
       <dependency>
         <groupId>org.bouncycastle</groupId>
         <artifactId>bcpkix-jdk15on</artifactId>
-        <version>1.69</version>
+        <version>${bouncycastle.version}</version>
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
@@ -752,7 +713,7 @@
       <dependency>
         <groupId>org.bouncycastle</groupId>
         <artifactId>bcprov-jdk15on</artifactId>
-        <version>1.69</version>
+        <version>${bouncycastle.version}</version>
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
@@ -1242,9 +1203,9 @@
             <configuration>
               <rules>
                 <requireJavaVersion>
-                  <!-- Enforce JDK 1.8+ for compilation. -->
+                  <!-- Enforce JDK 11+ for compilation. -->
                   <!-- This is needed because of java.util.zip.Deflater and NIO UDP multicast. -->
-                  <version>[1.8.0,)</version>
+                  <version>[11.0.0,)</version>
                 </requireJavaVersion>
                 <requireMavenVersion>
                   <version>[3.1.1,)</version>
@@ -1265,10 +1226,11 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.8.0</version>
         <configuration>
-          <compilerVersion>1.8</compilerVersion>
+          <compilerVersion>11</compilerVersion>
           <fork>true</fork>
           <source>${maven.compiler.source}</source>
           <target>${maven.compiler.target}</target>
+          <release>${maven.compiler.target}</release>
           <debug>true</debug>
           <optimize>true</optimize>
           <showDeprecation>true</showDeprecation>
@@ -1288,31 +1250,6 @@
             <exclude>**/package-info.java</exclude>
           </excludes>
         </configuration>
-      </plugin>
-      <plugin>
-        <!-- ensure that only methods available in java 1.6 can
-             be used even when compiling with java 1.7+ -->
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>animal-sniffer-maven-plugin</artifactId>
-        <version>1.16</version>
-        <configuration>
-          <signature>
-            <groupId>org.codehaus.mojo.signature</groupId>
-            <artifactId>java18</artifactId>
-            <version>1.0</version>
-          </signature>
-          <annotations>
-            <annotation>io.netty.util.internal.SuppressJava6Requirement</annotation>
-          </annotations>
-        </configuration>
-        <executions>
-          <execution>
-            <phase>process-classes</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
       <plugin>
         <artifactId>maven-checkstyle-plugin</artifactId>

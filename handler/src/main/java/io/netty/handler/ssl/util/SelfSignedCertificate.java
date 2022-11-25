@@ -54,8 +54,8 @@ import java.util.Date;
  * {@link java.io.File#createTempFile(String, String)}, and they are deleted when the JVM exits using
  * {@link java.io.File#deleteOnExit()}.
  * </p><p>
- * At first, this method tries to use OpenJDK's X.509 implementation (the {@code sun.security.x509} package).
- * If it fails, it tries to use <a href="https://www.bouncycastle.org/">Bouncy Castle</a> as a fallback.
+ * The certificate is generated using <a href="http://www.bouncycastle.org/">Bouncy Castle</a>, which is an
+ * <em>optional</em> dependency of Netty.
  * </p>
  */
 public final class SelfSignedCertificate {
@@ -236,22 +236,13 @@ public final class SelfSignedCertificate {
 
         String[] paths;
         try {
-            // Try Bouncy Castle first as otherwise we will see an IllegalAccessError on more recent JDKs.
             paths = BouncyCastleSelfSignedCertGenerator.generate(
                     fqdn, keypair, random, notBefore, notAfter, algorithm);
-        } catch (Throwable t) {
-            logger.debug("Failed to generate a self-signed X.509 certificate using Bouncy Castle:", t);
-            try {
-                // Try the OpenJDK's proprietary implementation.
-                paths = OpenJdkSelfSignedCertGenerator.generate(fqdn, keypair, random, notBefore, notAfter, algorithm);
-            } catch (Throwable t2) {
-                logger.debug("Failed to generate a self-signed X.509 certificate using sun.security.x509:", t2);
-                final CertificateException certificateException = new CertificateException(
-                        "No provider succeeded to generate a self-signed certificate. " +
-                                "See debug log for the root cause.", t2);
-                ThrowableUtil.addSuppressed(certificateException, t);
-                throw certificateException;
-            }
+        } catch (Throwable throwable) {
+            logger.debug("Failed to generate a self-signed X.509 certificate using Bouncy Castle:", throwable);
+            throw new CertificateException(
+                    "No provider succeeded to generate a self-signed certificate. " +
+                    "See debug log for the root cause.", throwable);
         }
 
         certificate = new File(paths[0]);
